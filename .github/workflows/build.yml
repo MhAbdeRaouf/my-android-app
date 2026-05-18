@@ -43,16 +43,17 @@ jobs:
             libncurses5-dev libncursesw5-dev
 
       # ─── 5. pip packages
-      #        Fix #3 : PEP 668 — use --break-system-packages NOT needed here
-      #                 because setup-python provides an isolated venv
+      #        Fix #3 : PEP 668 — setup-python provides isolated env, no --break needed
       #        Fix #7 : do NOT upgrade pip (avoid RECORD file error)
       #        Fix #11: pin cython==0.29.33 (Cython 3.x breaks Kivy 2.3.0)
+      #        Fix PATH: write ~/.local/bin to GITHUB_PATH so buildozer is found
       # ─────────────────────────────────────────────────────────────────────────
       - name: Install Python packages
         run: |
-          pip install cython==0.29.33
-          pip install buildozer>=1.5.0
-          pip install virtualenv
+          pip install --user cython==0.29.33
+          pip install --user "buildozer>=1.5.0"
+          pip install --user virtualenv
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       # ─── 6. Cache SDK/NDK to save ~15 min on repeat builds ──────────────────
       - name: Cache .buildozer global
