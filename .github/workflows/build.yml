@@ -11,43 +11,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ─── 1. Checkout via HTTPS + PAT (Fix #1: no password auth) ─────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ─── 2. Java 17 from official Ubuntu repo (Fix #6: no PPA needed) ───────
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      # ─── 3. Python 3.10 ──────────────────────────────────────────────────────
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10.11"
 
-      # ─── 4. System dependencies
-      #        Fix #4 : libtinfo5 REMOVED (not in Ubuntu 24.04)
-      #        Fix #9 : unzip + zip added
-      # ─────────────────────────────────────────────────────────────────────────
+      # Fix AC_PROG_LIBTOOL: libtool alone is not enough — libltdl-dev provides
+      # the m4 macros that autoconf needs when building libffi inside p4a.
+      # Also add autoconf automake explicitly to guarantee versions are present.
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y \
             git zip unzip \
             python3-pip python3-setuptools python3-dev \
-            build-essential autoconf automake libtool pkg-config \
-            cmake libffi-dev libssl-dev zlib1g-dev \
+            build-essential \
+            autoconf automake libtool libltdl-dev \
+            pkg-config cmake \
+            libffi-dev libssl-dev zlib1g-dev \
             libncurses5-dev libncursesw5-dev
 
-      # ─── 5. pip packages
-      #        Fix #3 : PEP 668 — setup-python provides isolated env, no --break needed
-      #        Fix #7 : do NOT upgrade pip (avoid RECORD file error)
-      #        Fix #11: pin cython==0.29.33 (Cython 3.x breaks Kivy 2.3.0)
-      #        Fix PATH: write ~/.local/bin to GITHUB_PATH so buildozer is found
-      # ─────────────────────────────────────────────────────────────────────────
       - name: Install Python packages
         run: |
           pip install --user cython==0.29.33
@@ -55,22 +47,15 @@ jobs:
           pip install --user virtualenv
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      # ─── 6. Cache SDK/NDK to save ~15 min on repeat builds ──────────────────
       - name: Cache .buildozer global
         uses: actions/cache@v4
         with:
           path: ~/.buildozer
           key: buildozer-global-${{ hashFiles('buildozer.spec') }}
 
-      # ─── 7. Build APK
-      #        Fix #5 : NOT using kivy/buildozer image — running pip-installed buildozer
-      #        Fix #8 : "yes |" bypasses interactive root confirmation (EOFError)
-      #        Fix #10: running as github runner (non-root) avoids permission clash
-      # ─────────────────────────────────────────────────────────────────────────
       - name: Build APK with Buildozer
         run: yes | buildozer -v android debug
 
-      # ─── 8. Upload APK artifact ──────────────────────────────────────────────
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
