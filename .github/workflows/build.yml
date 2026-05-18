@@ -14,19 +14,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Use the official kivy/buildozer Docker image.
-      # It ships with the exact NDK/SDK/Java/autoconf versions
-      # that p4a was tested against — no manual dependency hell.
+      - name: Cache .buildozer global
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+
+      # Override the kivy/buildozer entrypoint to run shell commands.
+      # Fix #5: image uses buildozer as ENTRYPOINT — must override with --entrypoint
+      # Fix #11: install cython==0.29.33 before buildozer runs
+      # Fix #8: yes | bypasses the interactive root confirmation
       - name: Build APK inside kivy/buildozer container
         run: |
           docker run --rm \
+            --entrypoint /bin/sh \
             -v "${{ github.workspace }}":/home/user/hostcwd \
+            -v "$HOME/.buildozer":/home/user/.buildozer \
             kivy/buildozer:latest \
-            /bin/sh -c "
-              pip install --user cython==0.29.33 --quiet &&
-              cd /home/user/hostcwd &&
-              yes | buildozer -v android debug
-            "
+            -c "pip install --user cython==0.29.33 --quiet && cd /home/user/hostcwd && yes | buildozer -v android debug"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
