@@ -20,10 +20,6 @@ jobs:
           path: ~/.buildozer
           key: buildozer-global-${{ hashFiles('buildozer.spec') }}
 
-      # Override the kivy/buildozer entrypoint to run shell commands.
-      # Fix #5: image uses buildozer as ENTRYPOINT — must override with --entrypoint
-      # Fix #11: install cython==0.29.33 before buildozer runs
-      # Fix #8: yes | bypasses the interactive root confirmation
       - name: Build APK inside kivy/buildozer container
         run: |
           docker run --rm \
@@ -31,7 +27,7 @@ jobs:
             -v "${{ github.workspace }}":/home/user/hostcwd \
             -v "$HOME/.buildozer":/home/user/.buildozer \
             kivy/buildozer:latest \
-            -c "pip install --user cython==0.29.33 --quiet && cd /home/user/hostcwd && yes | buildozer -v android debug"
+            -c "pip install cython==0.29.33 --quiet && cd /home/user/hostcwd && yes | buildozer -v android debug"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
